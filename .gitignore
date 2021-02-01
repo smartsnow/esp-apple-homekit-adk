@@ -79,3 +79,5 @@ docs/docusaurus/website/node_modules
 
 # cli logs
 **/logs
+
+.vscode
