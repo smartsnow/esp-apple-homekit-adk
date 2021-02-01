@@ -53,6 +53,9 @@
 typedef struct {
     struct {
         bool lightBulbOn;
+        float lightBulbHue;
+        float lightBulbSaturation;
+        int32_t lightBulbBrightness;
     } state;
     HAPAccessoryServerRef* server;
     HAPPlatformKeyValueStoreRef keyValueStore;
@@ -117,25 +120,44 @@ static void SaveAccessoryState(void) {
 //----------------------------------------------------------------------------------------------------------------------
 
 /**
- * HomeKit accessory that provides the Light Bulb service.
+ * HomeKit accessory that provides the Bridge service.
  *
  * Note: Not constant to enable BCT Manual Name Change.
  */
 static HAPAccessory accessory = { .aid = 1,
-                                  .category = kHAPAccessoryCategory_Lighting,
-                                  .name = "Acme Light Bulb",
-                                  .manufacturer = "Acme",
-                                  .model = "LightBulb1,1",
-                                  .serialNumber = "099DB48E9E28",
+                                  .category = kHAPAccessoryCategory_Bridges,
+                                  .name = "Snow Mesh Bridge",
+                                  .manufacturer = "Snow",
+                                  .model = "Mesh Bridge 1,1",
+                                  .serialNumber = "000000000001",
                                   .firmwareVersion = "1",
                                   .hardwareVersion = "1",
                                   .services = (const HAPService* const[]) { &accessoryInformationService,
                                                                             &hapProtocolInformationService,
                                                                             &pairingService,
+                                                                            NULL },
+                                  .callbacks = { .identify = IdentifyAccessory } };
+
+/**
+ * HomeKit accessory that provides the Light Bulb service.
+ *
+ * Note: Not constant to enable BCT Manual Name Change.
+ */
+static HAPAccessory lightBulbAccessory = { .aid = 2,
+                                  .category = kHAPAccessoryCategory_BridgedAccessory,
+                                  .name = "Snow Light Bulb",
+                                  .manufacturer = "Snow",
+                                  .model = "LightBulb 1,1",
+                                  .serialNumber = "000000000002",
+                                  .firmwareVersion = "1",
+                                  .hardwareVersion = "1",
+                                  .services = (const HAPService* const[]) { &accessoryInformationService,
                                                                             &lightBulbService,
                                                                             NULL },
                                   .callbacks = { .identify = IdentifyAccessory } };
 
+const HAPAccessory* const* bridgedAccessories = (const HAPAccessory *const[]){ &lightBulbAccessory,
+                                                                               NULL};
 //----------------------------------------------------------------------------------------------------------------------
 
 HAP_RESULT_USE_CHECK
@@ -177,13 +199,103 @@ HAPError HandleLightBulbOnWrite(
     return kHAPError_None;
 }
 
+HAP_RESULT_USE_CHECK
+HAPError HandleLightBulbHueRead(
+        HAPAccessoryServerRef* server HAP_UNUSED,
+        const HAPFloatCharacteristicReadRequest* request HAP_UNUSED,
+        float* value,
+        void* _Nullable context HAP_UNUSED) {
+    *value = accessoryConfiguration.state.lightBulbHue;
+    HAPLogInfo(&kHAPLog_Default, "%s: %g", __func__, *value);
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleLightBulbHueWrite(
+        HAPAccessoryServerRef* server,
+        const HAPFloatCharacteristicWriteRequest* request,
+        float value,
+        void* _Nullable context HAP_UNUSED) {
+    HAPLogInfo(&kHAPLog_Default, "%s: %g", __func__, value);
+    if (accessoryConfiguration.state.lightBulbHue != value) {
+        accessoryConfiguration.state.lightBulbHue = value;
+
+        SaveAccessoryState();
+
+        HAPAccessoryServerRaiseEvent(server, request->characteristic, request->service, request->accessory);
+    }
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleLightBulbSaturationRead(
+        HAPAccessoryServerRef* server HAP_UNUSED,
+        const HAPFloatCharacteristicReadRequest* request HAP_UNUSED,
+        float* value,
+        void* _Nullable context HAP_UNUSED) {
+    *value = accessoryConfiguration.state.lightBulbSaturation;
+    HAPLogInfo(&kHAPLog_Default, "%s: %g", __func__, *value);
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleLightBulbSaturationWrite(
+        HAPAccessoryServerRef* server,
+        const HAPFloatCharacteristicWriteRequest* request,
+        float value,
+        void* _Nullable context HAP_UNUSED) {
+    HAPLogInfo(&kHAPLog_Default, "%s: %g", __func__, value);
+    if (accessoryConfiguration.state.lightBulbSaturation != value) {
+        accessoryConfiguration.state.lightBulbSaturation = value;
+
+        SaveAccessoryState();
+
+        HAPAccessoryServerRaiseEvent(server, request->characteristic, request->service, request->accessory);
+    }
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleLightBulbBrightnessRead(
+        HAPAccessoryServerRef* server HAP_UNUSED,
+        const HAPIntCharacteristicReadRequest* request HAP_UNUSED,
+        int32_t* value,
+        void* _Nullable context HAP_UNUSED) {
+    *value = accessoryConfiguration.state.lightBulbBrightness;
+    HAPLogInfo(&kHAPLog_Default, "%s: %d", __func__, *value);
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleLightBulbBrightnessWrite(
+        HAPAccessoryServerRef* server,
+        const HAPIntCharacteristicWriteRequest* request,
+        int32_t value,
+        void* _Nullable context HAP_UNUSED) {
+    HAPLogInfo(&kHAPLog_Default, "%s: %d", __func__, value);
+    if (accessoryConfiguration.state.lightBulbBrightness != value) {
+        accessoryConfiguration.state.lightBulbBrightness = value;
+
+        SaveAccessoryState();
+
+        HAPAccessoryServerRaiseEvent(server, request->characteristic, request->service, request->accessory);
+    }
+
+    return kHAPError_None;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 
 void AccessoryNotification(
         const HAPAccessory* accessory,
         const HAPService* service,
         const HAPCharacteristic* characteristic,
-        void* ctx) {
+        void* ctx HAP_UNUSED) {
     HAPLogInfo(&kHAPLog_Default, "Accessory Notification");
 
     HAPAccessoryServerRaiseEvent(accessoryConfiguration.server, characteristic, service, accessory);
@@ -205,7 +317,10 @@ void AppRelease(void) {
 }
 
 void AppAccessoryServerStart(void) {
-    HAPAccessoryServerStart(accessoryConfiguration.server, &accessory);
+    HAPAccessoryServerStartBridge(accessoryConfiguration.server, 
+    &accessory,
+    bridgedAccessories,
+    true);
 }
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -236,9 +351,9 @@ const HAPAccessory* AppGetAccessoryInfo() {
 }
 
 void AppInitialize(
-        HAPAccessoryServerOptions* hapAccessoryServerOptions,
-        HAPPlatform* hapPlatform,
-        HAPAccessoryServerCallbacks* hapAccessoryServerCallbacks) {
+        HAPAccessoryServerOptions* hapAccessoryServerOptions HAP_UNUSED,
+        HAPPlatform* hapPlatform HAP_UNUSED,
+        HAPAccessoryServerCallbacks* hapAccessoryServerCallbacks HAP_UNUSED) {
     /*no-op*/
 }
 
