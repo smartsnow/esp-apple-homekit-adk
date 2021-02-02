@@ -160,6 +160,49 @@ const HAPAccessory* const* bridgedAccessories = (const HAPAccessory *const[]){ &
                                                                                NULL};
 //----------------------------------------------------------------------------------------------------------------------
 
+void mble_mesh_model_set(uint16_t dst, uint8_t *data, uint32_t len);
+
+static void mesh_set_onoff(bool onff)
+{
+    uint8_t data[4];
+
+    /* TID */
+    data[0] = 0x00; 
+
+    /* ONOFF type = 0x0100 */
+    data[1] = 0x00; 
+    data[2] = 0x01;
+
+    /* Value: uint8_t */
+    data[3] = onff;
+
+    mble_mesh_model_set(0x0004, data, sizeof(data));
+}
+
+static void mesh_set_hsv(float hue, float saturation, uint8_t value)
+{
+    uint8_t data[7];
+
+    /* TID */
+    data[0] = 0x00; 
+
+    /* HSV type = 0x0123 */
+    data[1] = 0x23; 
+    data[2] = 0x01;
+
+    /* Hue: uint16_t */
+    data[3] = (uint16_t)hue & 0xFF;
+    data[4] = (uint16_t)hue >> 8;
+
+    /* Saturation: uint8_t */
+    data[5] = (uint8_t)saturation;
+
+    /* Value: uint8_t */
+    data[6] = value;
+
+    mble_mesh_model_set(0x0004, data, sizeof(data));
+}
+
 HAP_RESULT_USE_CHECK
 HAPError IdentifyAccessory(
         HAPAccessoryServerRef* server HAP_UNUSED,
@@ -191,6 +234,8 @@ HAPError HandleLightBulbOnWrite(
     if (accessoryConfiguration.state.lightBulbOn != value) {
         accessoryConfiguration.state.lightBulbOn = value;
 
+        mesh_set_onoff(accessoryConfiguration.state.lightBulbOn);
+
         SaveAccessoryState();
 
         HAPAccessoryServerRaiseEvent(server, request->characteristic, request->service, request->accessory);
@@ -220,6 +265,8 @@ HAPError HandleLightBulbHueWrite(
     HAPLogInfo(&kHAPLog_Default, "%s: %g", __func__, value);
     if (accessoryConfiguration.state.lightBulbHue != value) {
         accessoryConfiguration.state.lightBulbHue = value;
+
+        mesh_set_hsv(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
 
         SaveAccessoryState();
 
@@ -251,6 +298,8 @@ HAPError HandleLightBulbSaturationWrite(
     if (accessoryConfiguration.state.lightBulbSaturation != value) {
         accessoryConfiguration.state.lightBulbSaturation = value;
 
+        mesh_set_hsv(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
+
         SaveAccessoryState();
 
         HAPAccessoryServerRaiseEvent(server, request->characteristic, request->service, request->accessory);
@@ -280,6 +329,8 @@ HAPError HandleLightBulbBrightnessWrite(
     HAPLogInfo(&kHAPLog_Default, "%s: %d", __func__, value);
     if (accessoryConfiguration.state.lightBulbBrightness != value) {
         accessoryConfiguration.state.lightBulbBrightness = value;
+
+        mesh_set_hsv(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
 
         SaveAccessoryState();
 

@@ -30,7 +30,7 @@
 #define ESP_BLE_MESH_VND_MODEL_ID_CLIENT    0x0000
 #define ESP_BLE_MESH_VND_MODEL_ID_SERVER    0x0001
 
-#define ESP_BLE_MESH_VND_MODEL_OP_SEND      ESP_BLE_MESH_MODEL_OP_3(0x12, CID_MXCHIP)
+#define ESP_BLE_MESH_VND_MODEL_OP_SET_UNACK ESP_BLE_MESH_MODEL_OP_3(0x12, CID_MXCHIP)
 #define ESP_BLE_MESH_VND_MODEL_OP_STATUS    ESP_BLE_MESH_MODEL_OP_3(0x13, CID_MXCHIP)
 
 static uint8_t dev_uuid[ESP_BLE_MESH_OCTET16_LEN] = { 0x32, 0x10 };
@@ -50,8 +50,8 @@ static esp_ble_mesh_cfg_srv_t config_server = {
 #endif
     .default_ttl = 7,
     /* 3 transmissions with 20ms interval */
-    .net_transmit = ESP_BLE_MESH_TRANSMIT(2, 20),
-    .relay_retransmit = ESP_BLE_MESH_TRANSMIT(2, 20),
+    .net_transmit = ESP_BLE_MESH_TRANSMIT(4, 10),
+    .relay_retransmit = ESP_BLE_MESH_TRANSMIT(4, 10),
 };
 
 static esp_ble_mesh_model_t root_models[] = {
@@ -59,7 +59,7 @@ static esp_ble_mesh_model_t root_models[] = {
 };
 
 static esp_ble_mesh_model_op_t vnd_op[] = {
-    ESP_BLE_MESH_MODEL_OP(ESP_BLE_MESH_VND_MODEL_OP_SEND, 2),
+    ESP_BLE_MESH_MODEL_OP(ESP_BLE_MESH_VND_MODEL_OP_STATUS, 2),
     ESP_BLE_MESH_MODEL_OP_END,
 };
 
@@ -81,6 +81,8 @@ static esp_ble_mesh_comp_t composition = {
 static esp_ble_mesh_prov_t provision = {
     .uuid = dev_uuid,
 };
+
+static SemaphoreHandle_t mesh_send_comp_sem;
 
 static void prov_complete(uint16_t net_idx, uint16_t addr, uint8_t flags, uint32_t iv_index)
 {
@@ -154,15 +156,9 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
 {
     switch (event) {
     case ESP_BLE_MESH_MODEL_OPERATION_EVT:
-        if (param->model_operation.opcode == ESP_BLE_MESH_VND_MODEL_OP_SEND) {
+        if (param->model_operation.opcode == ESP_BLE_MESH_VND_MODEL_OP_STATUS) {
             uint16_t tid = *(uint16_t *)param->model_operation.msg;
             ESP_LOGI(TAG, "Recv 0x%06x, tid 0x%04x", param->model_operation.opcode, tid);
-            esp_err_t err = esp_ble_mesh_server_model_send_msg(&vnd_models[0],
-                    param->model_operation.ctx, ESP_BLE_MESH_VND_MODEL_OP_STATUS,
-                    sizeof(tid), (uint8_t *)&tid);
-            if (err) {
-                ESP_LOGE(TAG, "Faild to send message 0x%06x", ESP_BLE_MESH_VND_MODEL_OP_STATUS);
-            }
         }
         break;
     case ESP_BLE_MESH_MODEL_SEND_COMP_EVT:
@@ -171,6 +167,7 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
             break;
         }
         ESP_LOGI(TAG, "Send 0x%06x", param->model_send_comp.opcode);
+        xSemaphoreGive(mesh_send_comp_sem);
         break;
     default:
         break;
@@ -180,6 +177,12 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
 static esp_err_t ble_mesh_init(void)
 {
     esp_err_t err;
+
+    mesh_send_comp_sem = xSemaphoreCreateBinary();
+    if (mesh_send_comp_sem == NULL) {
+        ESP_LOGE(TAG, "Failed to create mesh semaphore");
+        return ESP_FAIL;
+    }
 
     esp_ble_mesh_register_prov_callback(example_ble_mesh_provisioning_cb);
     esp_ble_mesh_register_config_server_callback(example_ble_mesh_config_server_cb);
@@ -204,6 +207,29 @@ static esp_err_t ble_mesh_init(void)
     ESP_LOGI(TAG, "BLE Mesh Node initialized");
 
     return ESP_OK;
+}
+
+void mble_mesh_model_set(uint16_t dst, uint8_t *data, uint32_t len)
+{
+    esp_ble_mesh_msg_ctx_t ctx = {0};
+    esp_err_t err;
+
+    ctx.net_idx = 0;
+    ctx.app_idx = 0;
+    ctx.addr = dst;
+    ctx.send_ttl = 3;
+    ctx.send_rel = 0;
+
+    xSemaphoreTake(mesh_send_comp_sem, 0);
+
+    err = esp_ble_mesh_server_model_send_msg(&vnd_models[0],
+            &ctx, ESP_BLE_MESH_VND_MODEL_OP_SET_UNACK,
+            len, data);
+    if (err) {
+        ESP_LOGE(TAG, "Faild to send message 0x%06x", ESP_BLE_MESH_VND_MODEL_OP_SET_UNACK);
+    }
+
+    xSemaphoreTake(mesh_send_comp_sem, 10000);
 }
 
 void mesh_app_main(void)
