@@ -24,14 +24,14 @@
 #include "board.h"
 #include "ble_mesh_demo_init.h"
 
-#define CID_ESP     0x02E5
+#define CID_MXCHIP  0x0922
 #define CID_NVAL    0xFFFF
 
 #define ESP_BLE_MESH_VND_MODEL_ID_CLIENT    0x0000
 #define ESP_BLE_MESH_VND_MODEL_ID_SERVER    0x0001
 
-#define ESP_BLE_MESH_VND_MODEL_OP_SEND      ESP_BLE_MESH_MODEL_OP_3(0x00, CID_ESP)
-#define ESP_BLE_MESH_VND_MODEL_OP_STATUS    ESP_BLE_MESH_MODEL_OP_3(0x01, CID_ESP)
+#define ESP_BLE_MESH_VND_MODEL_OP_SEND      ESP_BLE_MESH_MODEL_OP_3(0x12, CID_MXCHIP)
+#define ESP_BLE_MESH_VND_MODEL_OP_STATUS    ESP_BLE_MESH_MODEL_OP_3(0x13, CID_MXCHIP)
 
 static uint8_t dev_uuid[ESP_BLE_MESH_OCTET16_LEN] = { 0x32, 0x10 };
 
@@ -64,7 +64,7 @@ static esp_ble_mesh_model_op_t vnd_op[] = {
 };
 
 static esp_ble_mesh_model_t vnd_models[] = {
-    ESP_BLE_MESH_VENDOR_MODEL(CID_ESP, ESP_BLE_MESH_VND_MODEL_ID_SERVER,
+    ESP_BLE_MESH_VENDOR_MODEL(CID_MXCHIP, ESP_BLE_MESH_VND_MODEL_ID_SERVER,
     vnd_op, NULL, NULL),
 };
 
@@ -73,7 +73,7 @@ static esp_ble_mesh_elem_t elements[] = {
 };
 
 static esp_ble_mesh_comp_t composition = {
-    .cid = CID_ESP,
+    .cid = CID_MXCHIP,
     .elements = elements,
     .element_count = ARRAY_SIZE(elements),
 };
@@ -190,6 +190,8 @@ static esp_err_t ble_mesh_init(void)
         ESP_LOGE(TAG, "Failed to initialize mesh stack");
         return err;
     }
+
+    esp_ble_mesh_set_unprovisioned_device_name("Homekit Bridge");
 
     err = esp_ble_mesh_node_prov_enable(ESP_BLE_MESH_PROV_ADV | ESP_BLE_MESH_PROV_GATT);
     if (err != ESP_OK) {
