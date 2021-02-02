@@ -344,7 +344,11 @@ void main_task()
     DeinitializePlatform();
 }
 
+void mesh_app_main(void);
+
 void app_main()
 {
+    mesh_app_main();
+
     xTaskCreate(main_task, "main_task", 6 * 1024, NULL, 6, NULL);
 }
