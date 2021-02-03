@@ -58,6 +58,11 @@ extern const HAPService pairingService;
 extern const HAPService lightBulbService;
 
 /**
+ * Light Bulb service.
+ */
+extern const HAPService whiteService;
+
+/**
  * The 'On' characteristic of the Light Bulb service.
  */
 extern const HAPBoolCharacteristic lightBulbOnCharacteristic;

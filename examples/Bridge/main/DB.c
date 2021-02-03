@@ -44,6 +44,13 @@
 #define kIID_LightBulbSaturation       ((uint64_t) 0x0035)
 #define kIID_LightBulbBrightness       ((uint64_t) 0x0036)
 
+#define kIID_White                     ((uint64_t) 0x0040)
+#define kIID_WhiteServiceSignature    ((uint64_t) 0x0041)
+#define kIID_WhiteName                ((uint64_t) 0x0042)
+#define kIID_WhiteOn                   ((uint64_t) 0x0043)
+#define kIID_WhiteBrightness           ((uint64_t) 0x0044)
+#define kIID_WhiteColorTemperature     ((uint64_t) 0x0045)
+
 HAP_STATIC_ASSERT(kAttributeCount == 9 + 3 + 5 + 4, AttributeCount_mismatch);
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -568,5 +575,152 @@ const HAPService lightBulbService = {
                                                             &lightBulbHueCharacteristic,
                                                             &lightBulbSaturationCharacteristic,
                                                             &lightBulbBrightnessCharacteristic,
+                                                            NULL }
+};
+
+/**
+ * The 'Service Signature' characteristic of the White service.
+ */
+static const HAPDataCharacteristic whiteServiceSignatureCharacteristic = {
+    .format = kHAPCharacteristicFormat_Data,
+    .iid = kIID_WhiteServiceSignature,
+    .characteristicType = &kHAPCharacteristicType_ServiceSignature,
+    .debugDescription = kHAPCharacteristicDebugDescription_ServiceSignature,
+    .manufacturerDescription = NULL,
+    .properties = { .readable = true,
+                    .writable = false,
+                    .supportsEventNotification = false,
+                    .hidden = false,
+                    .requiresTimedWrite = false,
+                    .supportsAuthorizationData = false,
+                    .ip = { .controlPoint = true },
+                    .ble = { .supportsBroadcastNotification = false,
+                             .supportsDisconnectedNotification = false,
+                             .readableWithoutSecurity = false,
+                             .writableWithoutSecurity = false } },
+    .constraints = { .maxLength = 2097152 },
+    .callbacks = { .handleRead = HAPHandleServiceSignatureRead, .handleWrite = NULL }
+};
+
+/**
+ * The 'Name' characteristic of the White service.
+ */
+static const HAPStringCharacteristic whiteNameCharacteristic = {
+    .format = kHAPCharacteristicFormat_String,
+    .iid = kIID_WhiteName,
+    .characteristicType = &kHAPCharacteristicType_Name,
+    .debugDescription = kHAPCharacteristicDebugDescription_Name,
+    .manufacturerDescription = NULL,
+    .properties = { .readable = true,
+                    .writable = false,
+                    .supportsEventNotification = false,
+                    .hidden = false,
+                    .requiresTimedWrite = false,
+                    .supportsAuthorizationData = false,
+                    .ip = { .controlPoint = false, .supportsWriteResponse = false },
+                    .ble = { .supportsBroadcastNotification = false,
+                             .supportsDisconnectedNotification = false,
+                             .readableWithoutSecurity = false,
+                             .writableWithoutSecurity = false } },
+    .constraints = { .maxLength = 64 },
+    .callbacks = { .handleRead = HAPHandleNameRead, .handleWrite = NULL }
+};
+
+/**
+ * The 'On' characteristic of the White service.
+ */
+const HAPBoolCharacteristic whiteOnCharacteristic = {
+    .format = kHAPCharacteristicFormat_Bool,
+    .iid = kIID_WhiteOn,
+    .characteristicType = &kHAPCharacteristicType_On,
+    .debugDescription = kHAPCharacteristicDebugDescription_On,
+    .manufacturerDescription = NULL,
+    .properties = { .readable = true,
+                    .writable = true,
+                    .supportsEventNotification = true,
+                    .hidden = false,
+                    .requiresTimedWrite = false,
+                    .supportsAuthorizationData = false,
+                    .ip = { .controlPoint = false, .supportsWriteResponse = false },
+                    .ble = { .supportsBroadcastNotification = true,
+                             .supportsDisconnectedNotification = true,
+                             .readableWithoutSecurity = false,
+                             .writableWithoutSecurity = false } },
+    .callbacks = { .handleRead = HandleWhiteOnRead, .handleWrite = HandleWhiteOnWrite }
+};
+
+/**
+ * The 'Brightness' characteristic of the White service.
+ */
+const HAPIntCharacteristic whiteBrightnessCharacteristic = {
+    .format = kHAPCharacteristicFormat_Int,
+    .iid = kIID_WhiteBrightness,
+    .characteristicType = &kHAPCharacteristicType_Brightness,
+    .debugDescription = kHAPCharacteristicDebugDescription_Brightness,
+    .manufacturerDescription = NULL,
+    .properties = { .readable = true,
+                    .writable = true,
+                    .supportsEventNotification = true,
+                    .hidden = false,
+                    .requiresTimedWrite = false,
+                    .supportsAuthorizationData = false,
+                    .ip = { .controlPoint = false, .supportsWriteResponse = false },
+                    .ble = { .supportsBroadcastNotification = true,
+                             .supportsDisconnectedNotification = true,
+                             .readableWithoutSecurity = false,
+                             .writableWithoutSecurity = false } },
+    .units = kHAPCharacteristicUnits_Percentage,
+    .constraints = {
+        .minimumValue = 0,
+        .maximumValue = 100,
+        .stepValue = 1,
+    },
+    .callbacks = { .handleRead = HandleWhiteBrightnessRead, .handleWrite = HandleWhiteBrightnessWrite }
+};
+
+/**
+ * The 'ColorTemperature' characteristic of the White service.
+ */
+const HAPUInt32Characteristic whiteColorTemperatureCharacteristic = {
+    .format = kHAPCharacteristicFormat_UInt32,
+    .iid = kIID_WhiteColorTemperature,
+    .characteristicType = &kHAPCharacteristicType_ColorTemperature,
+    .debugDescription = kHAPCharacteristicDebugDescription_ColorTemperature,
+    .manufacturerDescription = NULL,
+    .properties = { .readable = true,
+                    .writable = true,
+                    .supportsEventNotification = true,
+                    .hidden = false,
+                    .requiresTimedWrite = false,
+                    .supportsAuthorizationData = false,
+                    .ip = { .controlPoint = false, .supportsWriteResponse = false },
+                    .ble = { .supportsBroadcastNotification = true,
+                             .supportsDisconnectedNotification = true,
+                             .readableWithoutSecurity = false,
+                             .writableWithoutSecurity = false } },
+    .units = kHAPCharacteristicUnits_None,
+    .constraints = {
+        .minimumValue = 50,
+        .maximumValue = 400,
+        .stepValue = 1,
+    },
+    .callbacks = { .handleRead = HandleWhiteColorTemperatureRead, .handleWrite = HandleWhiteColorTemperatureWrite }
+};
+
+/**
+ * The White service that contains the 'On' characteristic.
+ */
+const HAPService whiteService = {
+    .iid = kIID_White,
+    .serviceType = &kHAPServiceType_LightBulb,
+    .debugDescription = kHAPServiceDebugDescription_LightBulb,
+    .name = "White",
+    .properties = { .primaryService = false, .hidden = false, .ble = { .supportsConfiguration = false } },
+    .linkedServices = NULL,
+    .characteristics = (const HAPCharacteristic* const[]) { &whiteServiceSignatureCharacteristic,
+                                                            &whiteNameCharacteristic,
+                                                            &whiteOnCharacteristic,
+                                                            &whiteBrightnessCharacteristic,
+                                                            &whiteColorTemperatureCharacteristic,
                                                             NULL }
 };

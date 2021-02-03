@@ -56,6 +56,9 @@ typedef struct {
         float lightBulbHue;
         float lightBulbSaturation;
         int32_t lightBulbBrightness;
+        bool whiteOn;
+        int32_t whiteBrightness;
+        uint32_t whiteColorTemperature;
     } state;
     HAPAccessoryServerRef* server;
     HAPPlatformKeyValueStoreRef keyValueStore;
@@ -153,6 +156,7 @@ static HAPAccessory lightBulbAccessory = { .aid = 2,
                                   .hardwareVersion = "1",
                                   .services = (const HAPService* const[]) { &accessoryInformationService,
                                                                             &lightBulbService,
+                                                                            &whiteService,
                                                                             NULL },
                                   .callbacks = { .identify = IdentifyAccessory } };
 
@@ -162,7 +166,7 @@ const HAPAccessory* const* bridgedAccessories = (const HAPAccessory *const[]){ &
 
 void mble_mesh_model_set(uint16_t dst, uint8_t *data, uint32_t len);
 
-static void mesh_set_onoff(bool onff)
+static void MeshSetOnOff(bool onff)
 {
     uint8_t data[4];
 
@@ -179,7 +183,7 @@ static void mesh_set_onoff(bool onff)
     mble_mesh_model_set(0x0004, data, sizeof(data));
 }
 
-static void mesh_set_hsv(float hue, float saturation, uint8_t value)
+static void MeshSetHSB(float hue, float saturation, uint8_t brightness)
 {
     uint8_t data[7];
 
@@ -197,8 +201,44 @@ static void mesh_set_hsv(float hue, float saturation, uint8_t value)
     /* Saturation: uint8_t */
     data[5] = (uint8_t)saturation;
 
-    /* Value: uint8_t */
-    data[6] = value;
+    /* Brightness: uint8_t */
+    data[6] = brightness;
+
+    mble_mesh_model_set(0x0004, data, sizeof(data));
+}
+
+static void MeshSetBrightness(uint8_t brightness)
+{
+    uint8_t data[5];
+
+    /* TID */
+    data[0] = 0x00;
+
+    /* Brightness type = 0x0121 */
+    data[1] = 0x21;
+    data[2] = 0x01;
+
+    /* Brightness: uint16_t */
+    data[3] = brightness & 0xFF;
+    data[4] = brightness >> 8;
+
+    mble_mesh_model_set(0x0004, data, sizeof(data));
+}
+
+static void MeshSetColorTemperature(uint32_t colorTemperature)
+{
+    uint8_t data[4];
+
+    /* TID */
+    data[0] = 0x00;
+
+    /* ColorTemperature Percent type = 0x01F1 */
+    data[1] = 0xF1;
+    data[2] = 0x01;
+
+    /* ColorTemperature Percent: uint8_t */
+    
+    data[3] = (300 - colorTemperature) * 100 / 350;
 
     mble_mesh_model_set(0x0004, data, sizeof(data));
 }
@@ -234,7 +274,7 @@ HAPError HandleLightBulbOnWrite(
     if (accessoryConfiguration.state.lightBulbOn != value) {
         accessoryConfiguration.state.lightBulbOn = value;
 
-        mesh_set_onoff(accessoryConfiguration.state.lightBulbOn);
+        MeshSetOnOff(accessoryConfiguration.state.lightBulbOn);
 
         SaveAccessoryState();
 
@@ -266,7 +306,7 @@ HAPError HandleLightBulbHueWrite(
     if (accessoryConfiguration.state.lightBulbHue != value) {
         accessoryConfiguration.state.lightBulbHue = value;
 
-        mesh_set_hsv(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
+        MeshSetHSB(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
 
         SaveAccessoryState();
 
@@ -298,7 +338,7 @@ HAPError HandleLightBulbSaturationWrite(
     if (accessoryConfiguration.state.lightBulbSaturation != value) {
         accessoryConfiguration.state.lightBulbSaturation = value;
 
-        mesh_set_hsv(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
+        MeshSetHSB(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
 
         SaveAccessoryState();
 
@@ -330,7 +370,109 @@ HAPError HandleLightBulbBrightnessWrite(
     if (accessoryConfiguration.state.lightBulbBrightness != value) {
         accessoryConfiguration.state.lightBulbBrightness = value;
 
-        mesh_set_hsv(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
+        MeshSetHSB(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
+
+        SaveAccessoryState();
+
+        HAPAccessoryServerRaiseEvent(server, request->characteristic, request->service, request->accessory);
+    }
+
+    return kHAPError_None;
+}
+
+
+HAP_RESULT_USE_CHECK
+HAPError HandleWhiteOnRead(
+        HAPAccessoryServerRef* server HAP_UNUSED,
+        const HAPBoolCharacteristicReadRequest* request HAP_UNUSED,
+        bool* value,
+        void* _Nullable context HAP_UNUSED) {
+    *value = accessoryConfiguration.state.whiteOn;
+    HAPLogInfo(&kHAPLog_Default, "%s: %s", __func__, *value ? "true" : "false");
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleWhiteOnWrite(
+        HAPAccessoryServerRef* server,
+        const HAPBoolCharacteristicWriteRequest* request,
+        bool value,
+        void* _Nullable context HAP_UNUSED) {
+    HAPLogInfo(&kHAPLog_Default, "%s: %s", __func__, value ? "true" : "false");
+    if (accessoryConfiguration.state.whiteOn != value) {
+        accessoryConfiguration.state.whiteOn = value;
+
+        MeshSetOnOff(accessoryConfiguration.state.whiteOn);
+
+        SaveAccessoryState();
+
+        HAPAccessoryServerRaiseEvent(server, request->characteristic, request->service, request->accessory);
+    }
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleWhiteBrightnessRead(
+        HAPAccessoryServerRef* server HAP_UNUSED,
+        const HAPIntCharacteristicReadRequest* request HAP_UNUSED,
+        int32_t* value,
+        void* _Nullable context HAP_UNUSED) {
+    *value = accessoryConfiguration.state.whiteBrightness;
+    HAPLogInfo(&kHAPLog_Default, "%s: %d", __func__, *value);
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleWhiteBrightnessWrite(
+        HAPAccessoryServerRef* server,
+        const HAPIntCharacteristicWriteRequest* request,
+        int32_t value,
+        void* _Nullable context HAP_UNUSED) {
+    HAPLogInfo(&kHAPLog_Default, "%s: %d", __func__, value);
+    if (accessoryConfiguration.state.whiteBrightness != value) {
+        accessoryConfiguration.state.whiteBrightness = value;
+
+        MeshSetBrightness(value);
+
+        SaveAccessoryState();
+
+        HAPAccessoryServerRaiseEvent(server, request->characteristic, request->service, request->accessory);
+    }
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleWhiteColorTemperatureRead(
+        HAPAccessoryServerRef* server HAP_UNUSED,
+        const HAPUInt32CharacteristicReadRequest* request HAP_UNUSED,
+        uint32_t* value,
+        void* _Nullable context HAP_UNUSED) {
+    if (accessoryConfiguration.state.whiteColorTemperature < 50)
+    {
+        accessoryConfiguration.state.whiteColorTemperature = 50;
+        SaveAccessoryState();
+    }
+    *value = accessoryConfiguration.state.whiteColorTemperature;
+    HAPLogInfo(&kHAPLog_Default, "%s: %d", __func__, *value);
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleWhiteColorTemperatureWrite(
+        HAPAccessoryServerRef* server,
+        const HAPUInt32CharacteristicWriteRequest* request,
+        uint32_t value,
+        void* _Nullable context HAP_UNUSED) {
+    HAPLogInfo(&kHAPLog_Default, "%s: %d", __func__, value);
+    if (accessoryConfiguration.state.whiteColorTemperature != value) {
+        accessoryConfiguration.state.whiteColorTemperature = value;
+
+        MeshSetColorTemperature(value);
 
         SaveAccessoryState();
 
