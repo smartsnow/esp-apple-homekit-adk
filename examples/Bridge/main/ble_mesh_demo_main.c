@@ -218,7 +218,7 @@ void mble_mesh_send_data(uint16_t dst, uint8_t *data, uint32_t len)
     ctx.app_idx = 0;
     ctx.addr = dst;
     ctx.send_ttl = 3;
-    ctx.send_rel = 0;
+    ctx.send_rel = 1;
 
     xSemaphoreTake(mesh_send_comp_sem, 0);
 
