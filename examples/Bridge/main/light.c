@@ -25,6 +25,8 @@
 
 #include "light.h"
 
+#define TAG "Light"
+
 #define SHADOW_CHECK_INTERVAL_MS (10)
 
 typedef enum
@@ -35,7 +37,7 @@ typedef enum
 
 typedef struct
 {
-    bool onoff;
+    bool on;
     uint16_t hue;
     uint8_t saturation;
     uint8_t value;
@@ -136,11 +138,15 @@ static void light_set_by_mode(void)
         uint8_t temperature = light_shadow.temperature;
         if (brightness != light_shadow_last.brightness)
         {
+            ESP_LOGI(TAG, "Brightness = %d", brightness);
             light_set_brightness_internal(DEMO_LIGHT_MESH_ADDR, brightness);
+            light_shadow_last.brightness = brightness;
         }
         if (temperature != light_shadow_last.temperature)
         {
+            ESP_LOGI(TAG, "Temperature = %d", temperature);
             light_set_temperature_internal(DEMO_LIGHT_MESH_ADDR, temperature);
+            light_shadow_last.temperature = temperature;
         }
     }
     break;
@@ -152,7 +158,11 @@ static void light_set_by_mode(void)
         uint8_t value = light_shadow.value;
         if (hue != light_shadow_last.hue || saturation != light_shadow_last.saturation || value != light_shadow_last.value)
         {
+            ESP_LOGI(TAG, "Hue = %d, Saturation = %d, Value = %d", hue, saturation, value);
             light_set_hsv_internal(DEMO_LIGHT_MESH_ADDR, hue, saturation, value);
+            light_shadow_last.hue = hue;
+            light_shadow_last.saturation = saturation;
+            light_shadow_last.value = value;
         }
     }
     break;
@@ -165,24 +175,24 @@ static void light_task(void *arg)
     {
         vTaskDelay(SHADOW_CHECK_INTERVAL_MS);
 
-        bool onoff = light_shadow.onoff;
-        if (onoff != light_shadow_last.onoff)
+        bool on = light_shadow.on;
+        if (on != light_shadow_last.on)
         {
-            if (onoff)
+            ESP_LOGI(TAG, "ON = %d", on);
+            if (on)
             {
                 light_set_by_mode();
             }
-            else
-            {
-                light_set_onoff_internal(DEMO_LIGHT_MESH_ADDR, onoff);
-            }
+            light_set_onoff_internal(DEMO_LIGHT_MESH_ADDR, on);
+            light_shadow_last.on = on;
         }
         else
         {
-            light_set_by_mode();
+            if (on)
+            {
+                light_set_by_mode();
+            }
         }
-
-        memcpy(&light_shadow_last, &light_shadow, sizeof(light_shadow_t));
     }
 }
 
@@ -191,9 +201,9 @@ void light_init(void)
     xTaskCreate(light_task, "Light task", 4096, NULL, 6, NULL);
 }
 
-void light_set_onoff(uint16_t dst, bool onoff)
+void light_set_onoff(uint16_t dst, bool on)
 {
-    light_shadow.onoff = onoff;
+    light_shadow.on = on;
 }
 
 void light_set_hue(uint16_t dst, float hue)
