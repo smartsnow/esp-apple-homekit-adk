@@ -29,6 +29,7 @@
 
 #include "App.h"
 #include "DB.h"
+#include "light.h"
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -129,8 +130,8 @@ static void SaveAccessoryState(void) {
  */
 static HAPAccessory accessory = { .aid = 1,
                                   .category = kHAPAccessoryCategory_Bridges,
-                                  .name = "Snow Mesh Bridge",
-                                  .manufacturer = "Snow",
+                                  .name = "MXCHIP Mesh Bridge",
+                                  .manufacturer = "MXCHIP",
                                   .model = "Mesh Bridge 1,1",
                                   .serialNumber = "000000000001",
                                   .firmwareVersion = "1",
@@ -148,8 +149,8 @@ static HAPAccessory accessory = { .aid = 1,
  */
 static HAPAccessory lightBulbAccessory = { .aid = 2,
                                   .category = kHAPAccessoryCategory_BridgedAccessory,
-                                  .name = "Snow Light Bulb",
-                                  .manufacturer = "Snow",
+                                  .name = "MXCHIP Light Bulb",
+                                  .manufacturer = "MXCHIP",
                                   .model = "LightBulb 1,1",
                                   .serialNumber = "000000000002",
                                   .firmwareVersion = "1",
@@ -163,85 +164,6 @@ static HAPAccessory lightBulbAccessory = { .aid = 2,
 const HAPAccessory* const* bridgedAccessories = (const HAPAccessory *const[]){ &lightBulbAccessory,
                                                                                NULL};
 //----------------------------------------------------------------------------------------------------------------------
-
-void mble_mesh_model_set(uint16_t dst, uint8_t *data, uint32_t len);
-
-static void MeshSetOnOff(bool onff)
-{
-    uint8_t data[4];
-
-    /* TID */
-    data[0] = 0x00; 
-
-    /* ONOFF type = 0x0100 */
-    data[1] = 0x00; 
-    data[2] = 0x01;
-
-    /* Value: uint8_t */
-    data[3] = onff;
-
-    mble_mesh_model_set(0x0004, data, sizeof(data));
-}
-
-static void MeshSetHSB(float hue, float saturation, uint8_t brightness)
-{
-    uint8_t data[7];
-
-    /* TID */
-    data[0] = 0x00; 
-
-    /* HSV type = 0x0123 */
-    data[1] = 0x23; 
-    data[2] = 0x01;
-
-    /* Hue: uint16_t */
-    data[3] = (uint16_t)hue & 0xFF;
-    data[4] = (uint16_t)hue >> 8;
-
-    /* Saturation: uint8_t */
-    data[5] = (uint8_t)saturation;
-
-    /* Brightness: uint8_t */
-    data[6] = brightness;
-
-    mble_mesh_model_set(0x0004, data, sizeof(data));
-}
-
-static void MeshSetBrightness(uint8_t brightness)
-{
-    uint8_t data[5];
-
-    /* TID */
-    data[0] = 0x00;
-
-    /* Brightness type = 0x0121 */
-    data[1] = 0x21;
-    data[2] = 0x01;
-
-    /* Brightness: uint16_t */
-    data[3] = brightness & 0xFF;
-    data[4] = brightness >> 8;
-
-    mble_mesh_model_set(0x0004, data, sizeof(data));
-}
-
-static void MeshSetColorTemperature(uint32_t colorTemperature)
-{
-    uint8_t data[4];
-
-    /* TID */
-    data[0] = 0x00;
-
-    /* ColorTemperature Percent type = 0x01F1 */
-    data[1] = 0xF1;
-    data[2] = 0x01;
-
-    /* ColorTemperature Percent: uint8_t */
-    
-    data[3] = (300 - colorTemperature) * 100 / 350;
-
-    mble_mesh_model_set(0x0004, data, sizeof(data));
-}
 
 HAP_RESULT_USE_CHECK
 HAPError IdentifyAccessory(
@@ -274,7 +196,7 @@ HAPError HandleLightBulbOnWrite(
     if (accessoryConfiguration.state.lightBulbOn != value) {
         accessoryConfiguration.state.lightBulbOn = value;
 
-        MeshSetOnOff(accessoryConfiguration.state.lightBulbOn);
+        light_set_onoff(DEMO_LIGHT_MESH_ADDR, accessoryConfiguration.state.lightBulbOn);
 
         SaveAccessoryState();
 
@@ -306,7 +228,7 @@ HAPError HandleLightBulbHueWrite(
     if (accessoryConfiguration.state.lightBulbHue != value) {
         accessoryConfiguration.state.lightBulbHue = value;
 
-        MeshSetHSB(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
+        light_set_hue(DEMO_LIGHT_MESH_ADDR, accessoryConfiguration.state.lightBulbHue);
 
         SaveAccessoryState();
 
@@ -338,7 +260,7 @@ HAPError HandleLightBulbSaturationWrite(
     if (accessoryConfiguration.state.lightBulbSaturation != value) {
         accessoryConfiguration.state.lightBulbSaturation = value;
 
-        MeshSetHSB(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
+        light_set_saturation(DEMO_LIGHT_MESH_ADDR, accessoryConfiguration.state.lightBulbSaturation);
 
         SaveAccessoryState();
 
@@ -370,7 +292,7 @@ HAPError HandleLightBulbBrightnessWrite(
     if (accessoryConfiguration.state.lightBulbBrightness != value) {
         accessoryConfiguration.state.lightBulbBrightness = value;
 
-        MeshSetHSB(accessoryConfiguration.state.lightBulbHue, accessoryConfiguration.state.lightBulbSaturation, accessoryConfiguration.state.lightBulbBrightness);
+        light_set_value(DEMO_LIGHT_MESH_ADDR, accessoryConfiguration.state.lightBulbBrightness);
 
         SaveAccessoryState();
 
@@ -403,7 +325,7 @@ HAPError HandleWhiteOnWrite(
     if (accessoryConfiguration.state.whiteOn != value) {
         accessoryConfiguration.state.whiteOn = value;
 
-        MeshSetOnOff(accessoryConfiguration.state.whiteOn);
+        light_set_onoff(DEMO_LIGHT_MESH_ADDR, accessoryConfiguration.state.whiteOn);
 
         SaveAccessoryState();
 
@@ -435,7 +357,7 @@ HAPError HandleWhiteBrightnessWrite(
     if (accessoryConfiguration.state.whiteBrightness != value) {
         accessoryConfiguration.state.whiteBrightness = value;
 
-        MeshSetBrightness(value);
+        light_set_brightness(DEMO_LIGHT_MESH_ADDR, value);
 
         SaveAccessoryState();
 
@@ -472,7 +394,7 @@ HAPError HandleWhiteColorTemperatureWrite(
     if (accessoryConfiguration.state.whiteColorTemperature != value) {
         accessoryConfiguration.state.whiteColorTemperature = value;
 
-        MeshSetColorTemperature(value);
+        light_set_temperature(DEMO_LIGHT_MESH_ADDR, value);
 
         SaveAccessoryState();
 

@@ -29,6 +29,9 @@
 #endif
 
 #include <signal.h>
+
+#include "light.h"
+
 static bool requestedFactoryReset = false;
 static bool clearPairings = false;
 
@@ -349,6 +352,8 @@ void mesh_app_main(void);
 void app_main()
 {
     mesh_app_main();
+
+    light_init();
 
     xTaskCreate(main_task, "main_task", 6 * 1024, NULL, 6, NULL);
 }

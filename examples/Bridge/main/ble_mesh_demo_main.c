@@ -209,7 +209,7 @@ static esp_err_t ble_mesh_init(void)
     return ESP_OK;
 }
 
-void mble_mesh_model_set(uint16_t dst, uint8_t *data, uint32_t len)
+void mble_mesh_send_data(uint16_t dst, uint8_t *data, uint32_t len)
 {
     esp_ble_mesh_msg_ctx_t ctx = {0};
     esp_err_t err;
