@@ -200,6 +200,12 @@ HAPError HandleLightBulbOnWrite(
 
         SaveAccessoryState();
 
+        if (value == true)
+        {
+            accessoryConfiguration.state.whiteOn = false;
+            AccessoryNotification(&lightBulbAccessory, &whiteService, &whiteOnCharacteristic, NULL);
+        }
+
         HAPAccessoryServerRaiseEvent(server, request->characteristic, request->service, request->accessory);
     }
 
@@ -328,6 +334,12 @@ HAPError HandleWhiteOnWrite(
         light_set_onoff(DEMO_LIGHT_MESH_ADDR, accessoryConfiguration.state.whiteOn);
 
         SaveAccessoryState();
+
+        if (value == true)
+        {
+            accessoryConfiguration.state.lightBulbOn = false;
+            AccessoryNotification(&lightBulbAccessory, &lightBulbService, &lightBulbOnCharacteristic, NULL);
+        }
 
         HAPAccessoryServerRaiseEvent(server, request->characteristic, request->service, request->accessory);
     }

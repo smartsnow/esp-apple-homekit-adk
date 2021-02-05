@@ -67,6 +67,12 @@ extern const HAPService whiteService;
  */
 extern const HAPBoolCharacteristic lightBulbOnCharacteristic;
 
+
+/**
+ * The 'On' characteristic of the White service.
+ */
+extern const HAPBoolCharacteristic whiteOnCharacteristic;
+
 #if __has_feature(nullability)
 #pragma clang assume_nonnull end
 #endif

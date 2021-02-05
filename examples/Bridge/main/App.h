@@ -209,6 +209,12 @@ void RestorePlatformFactorySettings(void);
  */
 const HAPAccessory* AppGetAccessoryInfo();
 
+void AccessoryNotification(
+        const HAPAccessory* accessory,
+        const HAPService* service,
+        const HAPCharacteristic* characteristic,
+        void* ctx HAP_UNUSED);
+
 #if __has_feature(nullability)
 #pragma clang assume_nonnull end
 #endif
