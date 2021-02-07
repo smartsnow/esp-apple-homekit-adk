@@ -42,7 +42,7 @@ void HAPPlatformServiceDiscoveryRegister(
     HAPPrecondition(txtRecords);
 
     char tmp_proto[64] = {0};
-    strncpy(tmp_proto, protocol, sizeof(tmp_proto));
+    strncpy(tmp_proto, protocol, sizeof(tmp_proto) - 1);
     char *serv_type = strtok(tmp_proto, ".");
     char *proto = strtok(NULL, ".");
     strcpy(serviceDiscovery->serv_type, serv_type);
