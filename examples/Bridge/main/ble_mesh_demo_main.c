@@ -49,8 +49,8 @@ static esp_ble_mesh_cfg_srv_t config_server = {
     .gatt_proxy = ESP_BLE_MESH_GATT_PROXY_NOT_SUPPORTED,
 #endif
     .default_ttl = 7,
-    /* 3 transmissions with 20ms interval */
-    .net_transmit = ESP_BLE_MESH_TRANSMIT(4, 10),
+    /* 8 transmissions with 20ms interval */
+    .net_transmit = ESP_BLE_MESH_TRANSMIT(7, 10),
     .relay_retransmit = ESP_BLE_MESH_TRANSMIT(4, 10),
 };
 
@@ -169,6 +169,10 @@ static void example_ble_mesh_custom_model_cb(esp_ble_mesh_model_cb_event_t event
         ESP_LOGI(TAG, "Send 0x%06x", param->model_send_comp.opcode);
         xSemaphoreGive(mesh_send_comp_sem);
         break;
+    case ESP_BLE_MESH_CLIENT_MODEL_SEND_TIMEOUT_EVT:
+        ESP_LOGW(TAG, "Client message 0x%06x timeout", param->client_send_timeout.opcode);
+        xSemaphoreGive(mesh_send_comp_sem);
+        break;
     default:
         break;
     }
@@ -218,7 +222,7 @@ void mble_mesh_send_data(uint16_t dst, uint8_t *data, uint32_t len)
     ctx.app_idx = 0;
     ctx.addr = dst;
     ctx.send_ttl = 3;
-    ctx.send_rel = 1;
+    ctx.send_rel = 0;
 
     xSemaphoreTake(mesh_send_comp_sem, 0);
 
