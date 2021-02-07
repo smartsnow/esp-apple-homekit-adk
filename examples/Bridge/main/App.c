@@ -196,7 +196,7 @@ HAPError HandleLightBulbOnWrite(
     if (accessoryConfiguration.state.lightBulbOn != value) {
         accessoryConfiguration.state.lightBulbOn = value;
 
-        light_set_onoff(DEMO_LIGHT_MESH_ADDR, accessoryConfiguration.state.lightBulbOn);
+        light_color_set_on(DEMO_LIGHT_MESH_ADDR, accessoryConfiguration.state.lightBulbOn);
 
         SaveAccessoryState();
 
@@ -331,7 +331,7 @@ HAPError HandleWhiteOnWrite(
     if (accessoryConfiguration.state.whiteOn != value) {
         accessoryConfiguration.state.whiteOn = value;
 
-        light_set_onoff(DEMO_LIGHT_MESH_ADDR, accessoryConfiguration.state.whiteOn);
+        light_white_set_on(DEMO_LIGHT_MESH_ADDR, accessoryConfiguration.state.whiteOn);
 
         SaveAccessoryState();
 

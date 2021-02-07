@@ -51,8 +51,10 @@ static light_shadow_t light_shadow_last;
 
 void mble_mesh_send_data(uint16_t dst, uint8_t *data, uint32_t len);
 
-static void light_set_onoff_internal(uint16_t dst, bool onff)
+static void light_set_on_internal(uint16_t dst, bool on)
 {
+    ESP_LOGI(TAG, "ON = %d", on);
+
     uint8_t data[4];
 
     /* TID */
@@ -63,13 +65,15 @@ static void light_set_onoff_internal(uint16_t dst, bool onff)
     data[2] = 0x01;
 
     /* Value: uint8_t */
-    data[3] = onff;
+    data[3] = on;
 
     mble_mesh_send_data(dst, data, sizeof(data));
 }
 
-static void light_set_hsv_internal(uint16_t dst, float hue, float saturation, uint8_t value)
+static void light_set_hsv_internal(uint16_t dst, uint16_t hue, uint8_t saturation, uint8_t value)
 {
+    ESP_LOGI(TAG, "Hue = %d, Saturation = %d, Value = %d", hue, saturation, value);
+
     uint8_t data[7];
 
     /* TID */
@@ -80,11 +84,11 @@ static void light_set_hsv_internal(uint16_t dst, float hue, float saturation, ui
     data[2] = 0x01;
 
     /* Hue: uint16_t */
-    data[3] = (uint16_t)hue & 0xFF;
-    data[4] = (uint16_t)hue >> 8;
+    data[3] = hue & 0xFF;
+    data[4] = hue >> 8;
 
     /* Saturation: uint8_t */
-    data[5] = (uint8_t)saturation;
+    data[5] = saturation;
 
     /* Brightness: uint8_t */
     data[6] = value;
@@ -94,6 +98,8 @@ static void light_set_hsv_internal(uint16_t dst, float hue, float saturation, ui
 
 static void light_set_brightness_internal(uint16_t dst, uint8_t brightness)
 {
+    ESP_LOGI(TAG, "Brightness = %d", brightness);
+
     uint8_t data[5];
 
     /* TID */
@@ -104,14 +110,16 @@ static void light_set_brightness_internal(uint16_t dst, uint8_t brightness)
     data[2] = 0x01;
 
     /* Brightness: uint16_t */
-    data[3] = brightness & 0xFF;
-    data[4] = brightness >> 8;
+    data[3] = brightness;
+    data[4] = 0x00;
 
     mble_mesh_send_data(dst, data, sizeof(data));
 }
 
-static void light_set_temperature_internal(uint16_t dst, uint32_t temperature)
+static void light_set_temperature_internal(uint16_t dst, uint8_t temperature)
 {
+    ESP_LOGI(TAG, "Temperature = %d", temperature);
+
     uint8_t data[4];
 
     /* TID */
@@ -130,21 +138,28 @@ static void light_set_temperature_internal(uint16_t dst, uint32_t temperature)
 
 static void light_set_by_mode(void)
 {
-    switch (light_shadow.mode)
+    bool mode_changed = false;
+
+    light_mode_t mode = light_shadow.mode;
+    if (mode != light_shadow_last.mode)
+    {
+        mode_changed = true;
+        light_shadow_last.mode = mode;
+    }
+
+    switch (mode)
     {
     case LIGHT_MODE_WHITE:
     {
         uint8_t brightness = light_shadow.brightness;
         uint8_t temperature = light_shadow.temperature;
-        if (brightness != light_shadow_last.brightness)
+        if (mode_changed || brightness != light_shadow_last.brightness)
         {
-            ESP_LOGI(TAG, "Brightness = %d", brightness);
             light_set_brightness_internal(DEMO_LIGHT_MESH_ADDR, brightness);
             light_shadow_last.brightness = brightness;
         }
-        if (temperature != light_shadow_last.temperature)
+        if (mode_changed || temperature != light_shadow_last.temperature)
         {
-            ESP_LOGI(TAG, "Temperature = %d", temperature);
             light_set_temperature_internal(DEMO_LIGHT_MESH_ADDR, temperature);
             light_shadow_last.temperature = temperature;
         }
@@ -156,9 +171,8 @@ static void light_set_by_mode(void)
         uint16_t hue = light_shadow.hue;
         uint8_t saturation = light_shadow.saturation;
         uint8_t value = light_shadow.value;
-        if (hue != light_shadow_last.hue || saturation != light_shadow_last.saturation || value != light_shadow_last.value)
+        if (mode_changed || hue != light_shadow_last.hue || saturation != light_shadow_last.saturation || value != light_shadow_last.value)
         {
-            ESP_LOGI(TAG, "Hue = %d, Saturation = %d, Value = %d", hue, saturation, value);
             light_set_hsv_internal(DEMO_LIGHT_MESH_ADDR, hue, saturation, value);
             light_shadow_last.hue = hue;
             light_shadow_last.saturation = saturation;
@@ -178,12 +192,11 @@ static void light_task(void *arg)
         bool on = light_shadow.on;
         if (on != light_shadow_last.on)
         {
-            ESP_LOGI(TAG, "ON = %d", on);
             if (on)
             {
                 light_set_by_mode();
             }
-            light_set_onoff_internal(DEMO_LIGHT_MESH_ADDR, on);
+            light_set_on_internal(DEMO_LIGHT_MESH_ADDR, on);
             light_shadow_last.on = on;
         }
         else
@@ -201,37 +214,39 @@ void light_init(void)
     xTaskCreate(light_task, "Light task", 4096, NULL, 6, NULL);
 }
 
-void light_set_onoff(uint16_t dst, bool on)
+void light_color_set_on(uint16_t dst, bool on)
 {
     light_shadow.on = on;
+    light_shadow.mode = LIGHT_MODE_COLOR;
 }
 
 void light_set_hue(uint16_t dst, float hue)
 {
     light_shadow.hue = hue;
-    light_shadow.mode = LIGHT_MODE_COLOR;
 }
 
 void light_set_saturation(uint16_t dst, float saturation)
 {
     light_shadow.saturation = saturation;
-    light_shadow.mode = LIGHT_MODE_COLOR;
 }
 
 void light_set_value(uint16_t dst, uint8_t value)
 {
     light_shadow.value = value;
-    light_shadow.mode = LIGHT_MODE_COLOR;
+}
+
+void light_white_set_on(uint16_t dst, bool on)
+{
+    light_shadow.on = on;
+    light_shadow.mode = LIGHT_MODE_WHITE;
 }
 
 void light_set_brightness(uint16_t dst, uint8_t brightness)
 {
     light_shadow.brightness = brightness;
-    light_shadow.mode = LIGHT_MODE_WHITE;
 }
 
 void light_set_temperature(uint16_t dst, uint32_t temperature)
 {
     light_shadow.temperature = (300 - temperature) * 100 / 350;
-    light_shadow.mode = LIGHT_MODE_WHITE;
 }
