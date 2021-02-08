@@ -269,6 +269,15 @@ void mesh_app_main(void)
         return;
     }
 
+    err = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_ADV, ESP_PWR_LVL_P9);
+    if (err) {
+        ESP_LOGE(TAG, "Set BLE TX power ADV failed (err %d)", err);
+    }
+    err = esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_SCAN, ESP_PWR_LVL_P9);
+    if (err) {
+        ESP_LOGE(TAG, "Set BLE TX power SCAN failed (err %d)", err);
+    }
+
     ble_mesh_get_dev_uuid(dev_uuid);
 
     /* Initialize the Bluetooth Mesh Subsystem */
