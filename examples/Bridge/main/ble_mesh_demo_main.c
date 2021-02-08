@@ -82,6 +82,7 @@ static esp_ble_mesh_prov_t provision = {
     .uuid = dev_uuid,
 };
 
+static SemaphoreHandle_t mesh_send_mutex;
 static SemaphoreHandle_t mesh_send_comp_sem;
 
 static void prov_complete(uint16_t net_idx, uint16_t addr, uint8_t flags, uint32_t iv_index)
@@ -188,6 +189,13 @@ static esp_err_t ble_mesh_init(void)
         return ESP_FAIL;
     }
 
+    mesh_send_mutex = xSemaphoreCreateBinary();
+    if (mesh_send_mutex == NULL) {
+        ESP_LOGE(TAG, "Failed to create mesh mutex");
+        return ESP_FAIL;
+    }
+    xSemaphoreGive(mesh_send_mutex);
+
     esp_ble_mesh_register_prov_callback(example_ble_mesh_provisioning_cb);
     esp_ble_mesh_register_config_server_callback(example_ble_mesh_config_server_cb);
     esp_ble_mesh_register_custom_model_callback(example_ble_mesh_custom_model_cb);
@@ -224,6 +232,8 @@ void mble_mesh_send_data(uint16_t dst, uint8_t *data, uint32_t len)
     ctx.send_ttl = 3;
     ctx.send_rel = 0;
 
+    xSemaphoreTake(mesh_send_mutex, 0xFFFFFFFF);
+
     xSemaphoreTake(mesh_send_comp_sem, 0);
 
     err = esp_ble_mesh_server_model_send_msg(&vnd_models[0],
@@ -234,6 +244,8 @@ void mble_mesh_send_data(uint16_t dst, uint8_t *data, uint32_t len)
     }
 
     xSemaphoreTake(mesh_send_comp_sem, 10000);
+
+    xSemaphoreGive(mesh_send_mutex);
 }
 
 void mesh_app_main(void)

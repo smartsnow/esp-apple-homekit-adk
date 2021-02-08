@@ -45,11 +45,16 @@
 #define kIID_LightBulbBrightness       ((uint64_t) 0x0036)
 
 #define kIID_White                     ((uint64_t) 0x0040)
-#define kIID_WhiteServiceSignature    ((uint64_t) 0x0041)
-#define kIID_WhiteName                ((uint64_t) 0x0042)
+#define kIID_WhiteServiceSignature     ((uint64_t) 0x0041)
+#define kIID_WhiteName                 ((uint64_t) 0x0042)
 #define kIID_WhiteOn                   ((uint64_t) 0x0043)
 #define kIID_WhiteBrightness           ((uint64_t) 0x0044)
 #define kIID_WhiteColorTemperature     ((uint64_t) 0x0045)
+
+#define kIID_Switch                    ((uint64_t) 0x0050)
+#define kIID_SwitchServiceSignature    ((uint64_t) 0x0051)
+#define kIID_SwitchName                ((uint64_t) 0x0052)
+#define kIID_SwitchOn                  ((uint64_t) 0x0053)
 
 HAP_STATIC_ASSERT(kAttributeCount == 9 + 3 + 5 + 4, AttributeCount_mismatch);
 
@@ -722,5 +727,92 @@ const HAPService whiteService = {
                                                             &whiteOnCharacteristic,
                                                             &whiteBrightnessCharacteristic,
                                                             &whiteColorTemperatureCharacteristic,
+                                                            NULL }
+};
+
+/**
+ * The 'Service Signature' characteristic of the Switch service.
+ */
+static const HAPDataCharacteristic switchServiceSignatureCharacteristic = {
+    .format = kHAPCharacteristicFormat_Data,
+    .iid = kIID_SwitchServiceSignature,
+    .characteristicType = &kHAPCharacteristicType_ServiceSignature,
+    .debugDescription = kHAPCharacteristicDebugDescription_ServiceSignature,
+    .manufacturerDescription = NULL,
+    .properties = { .readable = true,
+                    .writable = false,
+                    .supportsEventNotification = false,
+                    .hidden = false,
+                    .requiresTimedWrite = false,
+                    .supportsAuthorizationData = false,
+                    .ip = { .controlPoint = true },
+                    .ble = { .supportsBroadcastNotification = false,
+                             .supportsDisconnectedNotification = false,
+                             .readableWithoutSecurity = false,
+                             .writableWithoutSecurity = false } },
+    .constraints = { .maxLength = 2097152 },
+    .callbacks = { .handleRead = HAPHandleServiceSignatureRead, .handleWrite = NULL }
+};
+
+/**
+ * The 'Name' characteristic of the Switch service.
+ */
+static const HAPStringCharacteristic switchNameCharacteristic = {
+    .format = kHAPCharacteristicFormat_String,
+    .iid = kIID_SwitchName,
+    .characteristicType = &kHAPCharacteristicType_Name,
+    .debugDescription = kHAPCharacteristicDebugDescription_Name,
+    .manufacturerDescription = NULL,
+    .properties = { .readable = true,
+                    .writable = false,
+                    .supportsEventNotification = false,
+                    .hidden = false,
+                    .requiresTimedWrite = false,
+                    .supportsAuthorizationData = false,
+                    .ip = { .controlPoint = false, .supportsWriteResponse = false },
+                    .ble = { .supportsBroadcastNotification = false,
+                             .supportsDisconnectedNotification = false,
+                             .readableWithoutSecurity = false,
+                             .writableWithoutSecurity = false } },
+    .constraints = { .maxLength = 64 },
+    .callbacks = { .handleRead = HAPHandleNameRead, .handleWrite = NULL }
+};
+
+/**
+ * The 'On' characteristic of the Switch service.
+ */
+const HAPBoolCharacteristic switchOnCharacteristic = {
+    .format = kHAPCharacteristicFormat_Bool,
+    .iid = kIID_SwitchOn,
+    .characteristicType = &kHAPCharacteristicType_On,
+    .debugDescription = kHAPCharacteristicDebugDescription_On,
+    .manufacturerDescription = NULL,
+    .properties = { .readable = true,
+                    .writable = true,
+                    .supportsEventNotification = true,
+                    .hidden = false,
+                    .requiresTimedWrite = false,
+                    .supportsAuthorizationData = false,
+                    .ip = { .controlPoint = false, .supportsWriteResponse = false },
+                    .ble = { .supportsBroadcastNotification = true,
+                             .supportsDisconnectedNotification = true,
+                             .readableWithoutSecurity = false,
+                             .writableWithoutSecurity = false } },
+    .callbacks = { .handleRead = HandleSwitchOnRead, .handleWrite = HandleSwitchOnWrite }
+};
+
+/**
+ * The Switch service that contains the 'On' characteristic.
+ */
+const HAPService switchService = {
+    .iid = kIID_Switch,
+    .serviceType = &kHAPServiceType_Switch,
+    .debugDescription = kHAPServiceDebugDescription_Switch,
+    .name = "Switch",
+    .properties = { .primaryService = true, .hidden = false, .ble = { .supportsConfiguration = false } },
+    .linkedServices = NULL,
+    .characteristics = (const HAPCharacteristic* const[]) { &switchServiceSignatureCharacteristic,
+                                                            &switchNameCharacteristic,
+                                                            &switchOnCharacteristic,
                                                             NULL }
 };

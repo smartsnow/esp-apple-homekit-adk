@@ -1,6 +1,6 @@
 /**
  * @file light.c
- * @author your name (you@domain.com)
+ * @author Snow Yang (snowyang.iot@outlook.com)
  * @brief 
  * @version 0.1
  * @date 2021-02-04

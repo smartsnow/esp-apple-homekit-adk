@@ -173,6 +173,26 @@ HAPError HandleWhiteColorTemperatureWrite(
         void* _Nullable context);
 
 /**
+ * Handle read request to the 'On' characteristic of the Switch service.
+ */
+HAP_RESULT_USE_CHECK
+HAPError HandleSwitchOnRead(
+        HAPAccessoryServerRef* server,
+        const HAPBoolCharacteristicReadRequest* request,
+        bool* value,
+        void* _Nullable context);
+
+/**
+ * Handle write request to the 'On' characteristic of the Switch service.
+ */
+HAP_RESULT_USE_CHECK
+HAPError HandleSwitchOnWrite(
+        HAPAccessoryServerRef* server,
+        const HAPBoolCharacteristicWriteRequest* request,
+        bool value,
+        void* _Nullable context);
+
+/**
  * Initialize the application.
  */
 void AppCreate(HAPAccessoryServerRef* server, HAPPlatformKeyValueStoreRef keyValueStore);

@@ -30,6 +30,7 @@
 #include "App.h"
 #include "DB.h"
 #include "light.h"
+#include "switch.h"
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -60,6 +61,7 @@ typedef struct {
         bool whiteOn;
         int32_t whiteBrightness;
         uint32_t whiteColorTemperature;
+        bool switchOn;
     } state;
     HAPAccessoryServerRef* server;
     HAPPlatformKeyValueStoreRef keyValueStore;
@@ -161,7 +163,26 @@ static HAPAccessory lightBulbAccessory = { .aid = 2,
                                                                             NULL },
                                   .callbacks = { .identify = IdentifyAccessory } };
 
+/**
+ * HomeKit accessory that provides the Switch service.
+ *
+ * Note: Not constant to enable BCT Manual Name Change.
+ */
+static HAPAccessory switchAccessory = { .aid = 3,
+                                  .category = kHAPAccessoryCategory_BridgedAccessory,
+                                  .name = "MXCHIP Switch",
+                                  .manufacturer = "MXCHIP",
+                                  .model = "Switch 1,1",
+                                  .serialNumber = "000000000002",
+                                  .firmwareVersion = "1",
+                                  .hardwareVersion = "1",
+                                  .services = (const HAPService* const[]) { &accessoryInformationService,
+                                                                            &switchService,
+                                                                            NULL },
+                                  .callbacks = { .identify = IdentifyAccessory } };
+
 const HAPAccessory* const* bridgedAccessories = (const HAPAccessory *const[]){ &lightBulbAccessory,
+                                                                               &switchAccessory,
                                                                                NULL};
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -407,6 +428,38 @@ HAPError HandleWhiteColorTemperatureWrite(
         accessoryConfiguration.state.whiteColorTemperature = value;
 
         light_set_temperature(DEMO_LIGHT_MESH_ADDR, value);
+
+        SaveAccessoryState();
+
+        HAPAccessoryServerRaiseEvent(server, request->characteristic, request->service, request->accessory);
+    }
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleSwitchOnRead(
+        HAPAccessoryServerRef* server HAP_UNUSED,
+        const HAPBoolCharacteristicReadRequest* request HAP_UNUSED,
+        bool* value,
+        void* _Nullable context HAP_UNUSED) {
+    *value = accessoryConfiguration.state.switchOn;
+    HAPLogInfo(&kHAPLog_Default, "%s: %s", __func__, *value ? "true" : "false");
+
+    return kHAPError_None;
+}
+
+HAP_RESULT_USE_CHECK
+HAPError HandleSwitchOnWrite(
+        HAPAccessoryServerRef* server,
+        const HAPBoolCharacteristicWriteRequest* request,
+        bool value,
+        void* _Nullable context HAP_UNUSED) {
+    HAPLogInfo(&kHAPLog_Default, "%s: %s", __func__, value ? "true" : "false");
+    if (accessoryConfiguration.state.switchOn != value) {
+        accessoryConfiguration.state.switchOn = value;
+
+        switch_set_on(DEMO_SWITCH_MESH_ADDR, accessoryConfiguration.state.switchOn);
 
         SaveAccessoryState();
 
